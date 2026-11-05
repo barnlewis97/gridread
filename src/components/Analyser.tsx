@@ -7,6 +7,9 @@ import Results from "./Results";
 const MAX_PDF_BYTES = 4 * 1024 * 1024;
 
 export default function Analyser() {
+  // Held in memory only, so the key is gone as soon as the page is refreshed or closed.
+  const [apiKey, setApiKey] = useState("");
+  const [showKey, setShowKey] = useState(false);
   const [text, setText] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -40,6 +43,7 @@ export default function Analyser() {
     setError(null);
     setResult(null);
     const body = new FormData();
+    body.append("apiKey", apiKey);
     if (file) body.append("file", file);
     else body.append("text", text);
 
@@ -58,11 +62,55 @@ export default function Analyser() {
     }
   }
 
-  const canAnalyse = !loading && (file !== null || text.trim().length > 0);
+  const canAnalyse =
+    !loading && apiKey.trim().length > 0 && (file !== null || text.trim().length > 0);
 
   return (
     <div className="space-y-8">
       <section className="space-y-4">
+        <div>
+          <label htmlFor="api-key" className="mb-1.5 block text-sm font-medium text-zinc-200">
+            Anthropic API key
+          </label>
+          <div className="relative">
+            <input
+              id="api-key"
+              type={showKey ? "text" : "password"}
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              disabled={loading}
+              placeholder="sk-ant-…"
+              autoComplete="off"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              className="w-full rounded-lg border border-teal-500/60 bg-zinc-900 py-2.5 pl-4 pr-20 font-mono text-sm text-white placeholder:text-zinc-500 outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-400/20 disabled:cursor-not-allowed disabled:border-zinc-700 disabled:bg-zinc-900/50 disabled:text-zinc-500"
+            />
+            <button
+              type="button"
+              onClick={() => setShowKey((v) => !v)}
+              aria-pressed={showKey}
+              aria-label={showKey ? "Hide API key" : "View API key"}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md border border-zinc-600 bg-zinc-800 px-2.5 py-1 text-xs font-medium text-zinc-200 hover:border-teal-400 hover:text-teal-300"
+            >
+              {showKey ? "Hide" : "View"}
+            </button>
+          </div>
+          <p className="mt-1.5 text-xs text-zinc-400">
+            Reviews are billed to your own account.{" "}
+            <a
+              href="https://console.anthropic.com/settings/keys"
+              target="_blank"
+              rel="noreferrer"
+              className="text-teal-400 underline hover:text-teal-300"
+            >
+              Get a key
+            </a>
+            . It is sent to this app&apos;s server only to run your review, is never saved, and
+            is cleared when you refresh the page.
+          </p>
+        </div>
+
         <div className="relative">
           <label htmlFor="ppa-text" className="sr-only">
             PPA text

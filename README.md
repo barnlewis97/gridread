@@ -8,25 +8,26 @@ A Next.js app for corporate energy buyers to review power purchase agreements (P
 
 Results can be exported to PDF with a choice of sections and terms.
 
+Visitors use their own [Anthropic API key](https://console.anthropic.com/settings/keys), entered on the page, so reviews are billed to their account rather than the host's. The key stays in browser memory, is sent to the app's own API route for each review, and is passed to Anthropic without being stored or logged.
+
 AI-generated analysis for information only — not legal advice. Results can vary slightly between runs.
 
 ## Running locally
 
 ```bash
 npm install
-cp .env.example .env.local   # then add your ANTHROPIC_API_KEY
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000 and enter your API key on the page.
 
 ## Deploying
 
-Deploy to Vercel and set `ANTHROPIC_API_KEY` under Project Settings → Environment Variables. The analysis route allows up to 300 seconds, as a full review can take a couple of minutes.
+Deploy to Vercel; no environment variables are needed. The analysis route allows up to 300 seconds, as a full review can take a couple of minutes.
 
 ## Model comparison script
 
-`scripts/compare-models.ts` runs a folder of PDFs through several Claude models and reports latency, tokens and cost. It makes live, billed API calls:
+`scripts/compare-models.ts` runs a folder of PDFs through several Claude models and reports latency, tokens and cost. It makes live, billed API calls, using `ANTHROPIC_API_KEY` from `.env.local` (see `.env.example`):
 
 ```bash
 node --env-file=.env.local scripts/compare-models.ts <pdf-dir> <out-dir>

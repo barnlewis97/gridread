@@ -10,22 +10,23 @@ export const maxDuration = 300;
 const MAX_PDF_BYTES = 4 * 1024 * 1024;
 const MAX_TEXT_CHARS = 400_000;
 
-const client = new Anthropic();
-
 function error(message: string, status: number) {
   return Response.json({ error: message }, { status });
 }
 
 export async function POST(req: Request) {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return error("ANTHROPIC_API_KEY is not set on the server.", 500);
-  }
-
   let form: FormData;
   try {
     form = await req.formData();
   } catch {
     return error("Invalid request.", 400);
+  }
+
+  // Each visitor supplies their own key, used for this request only and never stored or logged.
+  // A blank key must stop here: the SDK would otherwise fall back to ANTHROPIC_API_KEY in the env.
+  const apiKey = form.get("apiKey");
+  if (typeof apiKey !== "string" || !apiKey.trim()) {
+    return error("Enter your Anthropic API key.", 401);
   }
 
   const file = form.get("file");
@@ -59,6 +60,7 @@ export async function POST(req: Request) {
   }
 
   try {
+    const client = new Anthropic({ apiKey: apiKey.trim() });
     const response = await client.beta.messages.parse({
       model: "claude-opus-5-5",
       max_tokens: 16000,
@@ -92,7 +94,10 @@ export async function POST(req: Request) {
     return Response.json(response.parsed_output);
   } catch (err) {
     if (err instanceof Anthropic.AuthenticationError) {
-      return error("The Anthropic API key is invalid.", 500);
+      return error("That Anthropic API key is invalid or has expired.", 401);
+    }
+    if (err instanceof Anthropic.PermissionDeniedError) {
+      return error("That Anthropic API key does not have access to this model.", 403);
     }
     if (err instanceof Anthropic.RateLimitError) {
       return error("Rate limited by the Anthropic API. Please wait and try again.", 429);
