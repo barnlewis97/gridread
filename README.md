@@ -1,5 +1,7 @@
 # GridRead
 
+**Live app:** https://gridread.vercel.app (bring your own Anthropic API key)
+
 A Next.js app for corporate energy buyers to review power purchase agreements (PPAs) for risk. Paste the agreement text or upload a PDF, and Claude — acting as an energy lawyer advising the buyer — returns:
 
 - an extracted terms table (parties, facility, technology, contract term, ACQ, strike price, indexation, settlement basis, balancing, curtailment, break fee, governing law)
@@ -24,6 +26,12 @@ Open http://localhost:3000 and enter your API key on the page.
 ## Deploying
 
 Deploy to Vercel; no environment variables are needed. The analysis route allows up to 300 seconds, as a full review can take a couple of minutes.
+
+The Vercel project is not connected to this repo, so pushing does not deploy. Deploy to production with:
+
+```bash
+npx vercel deploy --prod
+```
 
 ## Model comparison script
 
