@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { extractText, getDocumentProxy } from "unpdf";
 import { AnalysisSchema } from "@/lib/schema";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
 
@@ -10,8 +11,23 @@ export const maxDuration = 300;
 const MAX_PDF_BYTES = 4 * 1024 * 1024;
 const MAX_TEXT_CHARS = 400_000;
 
+// Below this average, a PDF is treated as scanned and sent as-is.
+const MIN_TEXT_CHARS_PER_PAGE = 200;
+
 function error(message: string, status: number) {
   return Response.json({ error: message }, { status });
+}
+
+async function extractPdfText(bytes: Buffer): Promise<string | null> {
+  try {
+    const pdf = await getDocumentProxy(new Uint8Array(bytes));
+    const { totalPages, text } = await extractText(pdf, { mergePages: true });
+    const trimmed = text.trim();
+    return trimmed.length >= totalPages * MIN_TEXT_CHARS_PER_PAGE ? trimmed : null;
+  } catch (err) {
+    console.warn("PDF text extraction failed; sending the PDF instead.", err);
+    return null;
+  }
 }
 
 export async function POST(req: Request) {
@@ -40,12 +56,22 @@ export async function POST(req: Request) {
     if (file.size > MAX_PDF_BYTES) {
       return error("PDF is larger than the 4 MB limit.", 413);
     }
-    const data = Buffer.from(await file.arrayBuffer()).toString("base64");
-    document = {
-      type: "document",
-      source: { type: "base64", media_type: "application/pdf", data },
-      title: file.name,
-    };
+    const bytes = Buffer.from(await file.arrayBuffer());
+    // Claude bills a PDF as its text plus an image of every page, roughly 2.5x the tokens of the
+    // text alone, so send the extracted text when there is enough of it. Scanned PDFs have
+    // little or no text layer and still go as a PDF.
+    const extracted = await extractPdfText(bytes);
+    document = extracted
+      ? {
+          type: "document",
+          source: { type: "text", media_type: "text/plain", data: extracted },
+          title: file.name,
+        }
+      : {
+          type: "document",
+          source: { type: "base64", media_type: "application/pdf", data: bytes.toString("base64") },
+          title: file.name,
+        };
   } else if (typeof text === "string" && text.trim()) {
     if (text.length > MAX_TEXT_CHARS) {
       return error("Pasted text is too long.", 413);

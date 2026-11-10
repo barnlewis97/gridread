@@ -12,6 +12,8 @@ Results can be exported to PDF with a choice of sections and terms.
 
 Visitors use their own [Anthropic API key](https://console.anthropic.com/settings/keys), entered on the page, so reviews are billed to their account rather than the host's. The key stays in browser memory, is sent to the app's own API route for each review, and is passed to Anthropic without being stored or logged.
 
+To keep costs down, the app sends Claude the text extracted from an uploaded PDF rather than the PDF itself, which Claude would bill as text plus an image of every page. On an 80-page PPA this cut the cost of a review from about $1.05 to $0.52. Scanned PDFs with little or no extractable text are still sent as PDFs.
+
 AI-generated analysis for information only — not legal advice. Results can vary slightly between runs.
 
 ## Running locally
